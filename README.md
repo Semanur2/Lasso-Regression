@@ -8,9 +8,8 @@ from sklearn.model_selection import GridSearchCV
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# Veriyi yükleyin
-df = pd.read_csv('training.csv')  # Eğitim verinizin dosya adı
-df_test = pd.read_csv('docking_simulation.csv')  # Test verinizin dosya adı
+df = pd.read_csv('training.csv') 
+df_test = pd.read_csv('docking_simulation.csv')  
 
 # Separate features and target variable
 features = ['Gauss 1', 'Gauss 2', 'Repulsion', 'Hydrophobic', 'Hydrogen', 'Torsional']  # Selected features
