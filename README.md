@@ -1,90 +1,103 @@
-# Lasso-Regression
-Feature Selection and Model Evaluation using Lasso Regression
+# Lasso Regression for Feature Selection and Model Evaluation
+
+This project applies **Lasso Regression** to perform feature selection and evaluate the predictive performance of a model on molecular docking data.
+
+## Requirements
+
+Ensure you have the following Python libraries installed:
+
+```bash
+pip install pandas scikit-learn seaborn matplotlib
+```
+
+## Dataset
+
+- **Training Data:** `training.csv`
+- **Test Data:** `docking_simulation.csv`
+- Features used: `Gauss 1`, `Gauss 2`, `Repulsion`, `Hydrophobic`, `Hydrogen`, `Torsional`
+- Target variable: `Affinity (kcal/mol)`
+
+## Implementation
+
+### 1. Load Libraries and Data
+
+```python
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Lasso
-from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
-from sklearn.model_selection import GridSearchCV
 import seaborn as sns
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.linear_model import Lasso
+from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
-df = pd.read_csv('training.csv') 
-df_test = pd.read_csv('docking_simulation.csv')  
+# Load datasets
+df = pd.read_csv('training.csv')
+df_test = pd.read_csv('docking_simulation.csv')
 
-# Separate features and target variable
-features = ['Gauss 1', 'Gauss 2', 'Repulsion', 'Hydrophobic', 'Hydrogen', 'Torsional']  # Selected features
+# Define features and target
+features = ['Gauss 1', 'Gauss 2', 'Repulsion', 'Hydrophobic', 'Hydrogen', 'Torsional']
 X = df[features]
-y = df['Affinity(kcal/mol)']  # Affinity is the target variable
+y = df['Affinity(kcal/mol)']
+```
 
-# Split the data into training and testing sets
+### 2. Split Data
+
+```python
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+```
 
-# Start Lasso regression
+### 3. Train Lasso Model
+
+```python
 lasso = Lasso(alpha=0.01)
-
-# Train the Lasso model with the training data
 lasso.fit(X_train, y_train)
 
-# Check the coefficients and select non-zero ones
-lasso_coef = lasso.coef_
-selected_features_lasso = X_train.columns[lasso_coef != 0]
-print(f"Selected Features (Lasso): {selected_features_lasso}")
+# Identify selected features
+selected_features = X_train.columns[lasso.coef_ != 0]
+print(f"Selected Features (Lasso): {selected_features}")
+```
 
-# Calculate model accuracy
-y_train_pred_lasso = lasso.predict(X_train)
-r2_lasso = r2_score(y_train, y_train_pred_lasso)
-mse_lasso = mean_squared_error(y_train, y_train_pred_lasso)
-mae_lasso = mean_absolute_error(y_train, y_train_pred_lasso)
+### 4. Model Evaluation Function
 
-# Print the results
-print(f"Lasso R² Score: {r2_lasso:.4f}")
-print(f"Lasso Mean Squared Error (MSE): {mse_lasso:.4f}")
-print(f"Lasso Mean Absolute Error (MAE): {mae_lasso:.4f}")
+```python
+def evaluate_model(model, X_train, X_test, y_train, y_test):
+    y_train_pred = model.predict(X_train)
+    y_test_pred = model.predict(X_test)
+    
+    metrics = {
+        'Train R²': r2_score(y_train, y_train_pred),
+        'Train MSE': mean_squared_error(y_train, y_train_pred),
+        'Train MAE': mean_absolute_error(y_train, y_train_pred),
+        'Test R²': r2_score(y_test, y_test_pred),
+        'Test MSE': mean_squared_error(y_test, y_test_pred),
+        'Test MAE': mean_absolute_error(y_test, y_test_pred),
+    }
+    
+    for key, value in metrics.items():
+        print(f"{key}: {value:.4f}")
+    
+    return y_test, y_test_pred
 
-# Make predictions on the test set
-y_test_pred_lasso = lasso.predict(X_test)
+# Evaluate Lasso Model
+y_test, y_test_pred = evaluate_model(lasso, X_train, X_test, y_train, y_test)
+```
 
-# Calculate model accuracy on the test set
-r2_test_lasso = r2_score(y_test, y_test_pred_lasso)
-mse_test_lasso = mean_squared_error(y_test, y_test_pred_lasso)
-mae_test_lasso = mean_absolute_error(y_test, y_test_pred_lasso)
+### 5. Hyperparameter Tuning with GridSearchCV
 
-# Print the results
-print(f"Lasso Test R² Score: {r2_test_lasso:.4f}")
-print(f"Lasso Test Mean Squared Error (MSE): {mse_test_lasso:.4f}")
-print(f"Lasso Test Mean Absolute Error (MAE): {mae_test_lasso:.4f}")
-
-# If you want to find better model parameters, you can search the alpha parameter using GridSearchCV
+```python
 param_grid = {'alpha': [0.001, 0.01, 0.1, 1, 10, 100]}
 grid_search = GridSearchCV(Lasso(), param_grid, cv=5, scoring='neg_mean_squared_error')
 grid_search.fit(X_train, y_train)
 
-# Print the best parameter and model
-print(f"Best Alpha value: {grid_search.best_params_['alpha']}")
-print(f"Best score: {grid_search.best_score_}")
+print(f"Best Alpha: {grid_search.best_params_['alpha']}")
 
-# Retrain with the best model and print the results
+# Retrain with Best Model
 best_lasso = grid_search.best_estimator_
-y_train_pred_best = best_lasso.predict(X_train)
-y_test_pred_best = best_lasso.predict(X_test)
+y_test, y_test_pred_best = evaluate_model(best_lasso, X_train, X_test, y_train, y_test)
+```
 
-r2_train_best = r2_score(y_train, y_train_pred_best)
-mse_train_best = mean_squared_error(y_train, y_train_pred_best)
-mae_train_best = mean_absolute_error(y_train, y_train_pred_best)
+### 6. Visualization: Actual vs Predicted Affinity
 
-r2_test_best = r2_score(y_test, y_test_pred_best)
-mse_test_best = mean_squared_error(y_test, y_test_pred_best)
-mae_test_best = mean_absolute_error(y_test, y_test_pred_best)
-
-print(f"Best Lasso Training R²: {r2_train_best:.4f}")
-print(f"Best Lasso Training MSE: {mse_train_best:.4f}")
-print(f"Best Lasso Training MAE: {mae_train_best:.4f}")
-
-print(f"Best Lasso Test R²: {r2_test_best:.4f}")
-print(f"Best Lasso Test MSE: {mse_test_best:.4f}")
-print(f"Best Lasso Test MAE: {mae_test_best:.4f}")
-
-# Visualize the actual vs predicted values
+```python
 plt.figure(figsize=(10,6))
 plt.scatter(y_test, y_test_pred_best, color='blue', label='Predicted')
 plt.plot([min(y_test), max(y_test)], [min(y_test), max(y_test)], color='red', linestyle='--', label='Actual Values')
@@ -93,3 +106,13 @@ plt.ylabel('Predicted Affinity (kcal/mol)')
 plt.title('Actual vs Predicted Affinity (Best Lasso)')
 plt.legend()
 plt.show()
+```
+
+## Results
+
+- The selected features using Lasso Regression are displayed in the output.
+- The model's performance is measured in terms of R² score, Mean Squared Error (MSE), and Mean Absolute Error (MAE).
+- The best alpha parameter for Lasso regression is identified using **GridSearchCV**.
+- A scatter plot compares the actual vs. predicted affinity values.
+
+
